@@ -1,12 +1,16 @@
 using System.Text;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
 using TaskManagementApi.Data;
+using TaskManagementApi.DTOs.Common;
 using TaskManagementApi.Interfaces;
+using TaskManagementApi.Middleware;
 using TaskManagementApi.Models;
 using TaskManagementApi.Options;
 using TaskManagementApi.Services;
@@ -22,6 +26,21 @@ builder
     .AddJsonOptions(options =>
     {
         options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+    })
+    .ConfigureApiBehaviorOptions(options =>
+    {
+        options.InvalidModelStateResponseFactory = context =>
+        {
+            var message =
+                context
+                    .ModelState.Values.SelectMany(value => value.Errors)
+                    .Select(error => error.ErrorMessage)
+                    .FirstOrDefault(error => !string.IsNullOrWhiteSpace(error)) ?? "Validation failed";
+
+            return new BadRequestObjectResult(
+                new ErrorResponseDto { Message = message, StatusCode = StatusCodes.Status400BadRequest }
+            );
+        };
     });
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
@@ -61,6 +80,21 @@ builder
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwt.Key)),
             ClockSkew = TimeSpan.FromMinutes(1),
         };
+        options.Events = new JwtBearerEvents
+        {
+            OnChallenge = async context =>
+            {
+                context.HandleResponse();
+                context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+                context.Response.ContentType = "application/json";
+                await context.Response.WriteAsync(
+                    JsonSerializer.Serialize(
+                        new ErrorResponseDto { Message = "Unauthorized", StatusCode = StatusCodes.Status401Unauthorized },
+                        new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase }
+                    )
+                );
+            },
+        };
     });
 builder.Services.AddAuthorization();
 
@@ -78,6 +112,8 @@ using (var scope = app.Services.CreateScope())
     var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
     await db.Database.MigrateAsync();
 }
+
+app.UseMiddleware<ExceptionMiddleware>();
 
 if (app.Environment.IsDevelopment())
 {

@@ -1,6 +1,8 @@
 using Microsoft.EntityFrameworkCore;
 using TaskManagementApi.Data;
+using TaskManagementApi.DTOs.Common;
 using TaskManagementApi.DTOs.Tasks;
+using TaskManagementApi.Exceptions;
 using TaskManagementApi.Interfaces;
 using TaskManagementApi.Models;
 
@@ -17,22 +19,41 @@ public class TaskService : ITaskService
         _currentUser = currentUser;
     }
 
-    public async Task<IReadOnlyList<TaskResponseDto>> GetAllAsync()
+    public async Task<PagedResultDto<TaskResponseDto>> GetAllAsync(TaskQueryDto query)
     {
         var userId = _currentUser.GetRequiredUserId();
-        var tasks = await _db
-            .Tasks.AsNoTracking()
-            .Where(item => item.UserId == userId)
+        var tasks = _db.Tasks.AsNoTracking().Where(item => item.UserId == userId);
+
+        if (query.Status is { } status)
+        {
+            tasks = tasks.Where(item => item.Status == status);
+        }
+
+        if (query.Priority is { } priority)
+        {
+            tasks = tasks.Where(item => item.Priority == priority);
+        }
+
+        var totalCount = await tasks.CountAsync();
+        var items = await tasks
             .OrderByDescending(item => item.CreatedAt)
+            .Skip((query.Page - 1) * query.PageSize)
+            .Take(query.PageSize)
             .ToListAsync();
 
-        return tasks.Select(ToResponse).ToList();
+        return new PagedResultDto<TaskResponseDto>
+        {
+            Items = items.Select(ToResponse).ToList(),
+            Page = query.Page,
+            PageSize = query.PageSize,
+            TotalCount = totalCount,
+        };
     }
 
-    public async Task<TaskResponseDto?> GetByIdAsync(int id)
+    public async Task<TaskResponseDto> GetByIdAsync(int id)
     {
-        var task = await FindOwnedTaskAsync(id, track: false);
-        return task is null ? null : ToResponse(task);
+        var task = await GetOwnedTaskAsync(id, track: false);
+        return ToResponse(task);
     }
 
     public async Task<TaskResponseDto> CreateAsync(CreateTaskDto dto)
@@ -55,13 +76,9 @@ public class TaskService : ITaskService
         return ToResponse(task);
     }
 
-    public async Task<TaskResponseDto?> UpdateAsync(int id, UpdateTaskDto dto)
+    public async Task<TaskResponseDto> UpdateAsync(int id, UpdateTaskDto dto)
     {
-        var task = await FindOwnedTaskAsync(id, track: true);
-        if (task is null)
-        {
-            return null;
-        }
+        var task = await GetOwnedTaskAsync(id, track: true);
 
         task.Title = dto.Title;
         task.Description = dto.Description;
@@ -74,14 +91,9 @@ public class TaskService : ITaskService
         return ToResponse(task);
     }
 
-    public async Task<TaskResponseDto?> CompleteAsync(int id)
+    public async Task<TaskResponseDto> CompleteAsync(int id)
     {
-        var task = await FindOwnedTaskAsync(id, track: true);
-        if (task is null)
-        {
-            return null;
-        }
-
+        var task = await GetOwnedTaskAsync(id, track: true);
         task.Status = TaskItemStatus.Completed;
         task.UpdatedAt = DateTime.UtcNow;
 
@@ -89,20 +101,25 @@ public class TaskService : ITaskService
         return ToResponse(task);
     }
 
-    public async Task<bool> DeleteAsync(int id)
+    public async Task DeleteAsync(int id)
     {
         var userId = _currentUser.GetRequiredUserId();
         var affected = await _db
             .Tasks.Where(item => item.Id == id && item.UserId == userId)
             .ExecuteDeleteAsync();
-        return affected > 0;
+
+        if (affected == 0)
+        {
+            throw new NotFoundException("Task not found");
+        }
     }
 
-    private async Task<TaskItem?> FindOwnedTaskAsync(int id, bool track)
+    private async Task<TaskItem> GetOwnedTaskAsync(int id, bool track)
     {
         var userId = _currentUser.GetRequiredUserId();
         var query = track ? _db.Tasks : _db.Tasks.AsNoTracking();
-        return await query.FirstOrDefaultAsync(item => item.Id == id && item.UserId == userId);
+        var task = await query.FirstOrDefaultAsync(item => item.Id == id && item.UserId == userId);
+        return task ?? throw new NotFoundException("Task not found");
     }
 
     private static DateTime? ToUtc(DateTime? value)

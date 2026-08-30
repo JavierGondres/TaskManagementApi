@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using TaskManagementApi.DTOs.Common;
 using TaskManagementApi.DTOs.Tasks;
 using TaskManagementApi.Interfaces;
 
@@ -18,21 +19,15 @@ public class TasksController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<TaskResponseDto>>> GetAll()
+    public async Task<ActionResult<PagedResultDto<TaskResponseDto>>> GetAll([FromQuery] TaskQueryDto query)
     {
-        return Ok(await _taskService.GetAllAsync());
+        return Ok(await _taskService.GetAllAsync(query));
     }
 
     [HttpGet("{id:int}")]
     public async Task<ActionResult<TaskResponseDto>> GetById(int id)
     {
-        var task = await _taskService.GetByIdAsync(id);
-        if (task is null)
-        {
-            return NotFound();
-        }
-
-        return Ok(task);
+        return Ok(await _taskService.GetByIdAsync(id));
     }
 
     [HttpPost]
@@ -45,36 +40,19 @@ public class TasksController : ControllerBase
     [HttpPut("{id:int}")]
     public async Task<ActionResult<TaskResponseDto>> Update(int id, UpdateTaskDto dto)
     {
-        var updated = await _taskService.UpdateAsync(id, dto);
-        if (updated is null)
-        {
-            return NotFound();
-        }
-
-        return Ok(updated);
+        return Ok(await _taskService.UpdateAsync(id, dto));
     }
 
     [HttpPatch("{id:int}/complete")]
     public async Task<ActionResult<TaskResponseDto>> Complete(int id)
     {
-        var completed = await _taskService.CompleteAsync(id);
-        if (completed is null)
-        {
-            return NotFound();
-        }
-
-        return Ok(completed);
+        return Ok(await _taskService.CompleteAsync(id));
     }
 
     [HttpDelete("{id:int}")]
     public async Task<IActionResult> Delete(int id)
     {
-        var deleted = await _taskService.DeleteAsync(id);
-        if (!deleted)
-        {
-            return NotFound();
-        }
-
+        await _taskService.DeleteAsync(id);
         return NoContent();
     }
 }

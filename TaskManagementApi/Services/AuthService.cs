@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using TaskManagementApi.Data;
 using TaskManagementApi.DTOs.Auth;
 using TaskManagementApi.DTOs.Users;
+using TaskManagementApi.Exceptions;
 using TaskManagementApi.Interfaces;
 using TaskManagementApi.Models;
 
@@ -28,13 +29,13 @@ public class AuthService : IAuthService
         _currentUser = currentUser;
     }
 
-    public async Task<AuthResponseDto?> RegisterAsync(RegisterRequestDto dto)
+    public async Task<AuthResponseDto> RegisterAsync(RegisterRequestDto dto)
     {
         var email = NormalizeEmail(dto.Email);
         var exists = await _db.Users.AnyAsync(user => user.Email == email);
         if (exists)
         {
-            return null;
+            throw new ConflictException("Email already registered");
         }
 
         var user = new User
@@ -51,34 +52,42 @@ public class AuthService : IAuthService
         return ToAuthResponse(user);
     }
 
-    public async Task<AuthResponseDto?> LoginAsync(LoginRequestDto dto)
+    public async Task<AuthResponseDto> LoginAsync(LoginRequestDto dto)
     {
         var email = NormalizeEmail(dto.Email);
         var user = await _db.Users.FirstOrDefaultAsync(item => item.Email == email);
         if (user is null)
         {
-            return null;
+            throw new UnauthorizedAppException("Invalid email or password");
         }
 
-        var verification = _passwordHasher.VerifyHashedPassword(user, user.PasswordHash, dto.Password);
+        var verification = _passwordHasher.VerifyHashedPassword(
+            user,
+            user.PasswordHash,
+            dto.Password
+        );
         if (verification == PasswordVerificationResult.Failed)
         {
-            return null;
+            throw new UnauthorizedAppException("Invalid email or password");
         }
 
         return ToAuthResponse(user);
     }
 
-    public async Task<UserResponseDto?> GetCurrentUserAsync()
+    public async Task<UserResponseDto> GetCurrentUserAsync()
     {
         var userId = _currentUser.GetRequiredUserId();
         var user = await _db.Users.AsNoTracking().FirstOrDefaultAsync(item => item.Id == userId);
-        return user is null ? null : ToUserResponse(user);
+        return user is null ? throw new NotFoundException("User not found") : ToUserResponse(user);
     }
 
     private AuthResponseDto ToAuthResponse(User user)
     {
-        return new AuthResponseDto { Token = _tokenService.CreateToken(user), User = ToUserResponse(user) };
+        return new AuthResponseDto
+        {
+            Token = _tokenService.CreateToken(user),
+            User = ToUserResponse(user),
+        };
     }
 
     private static UserResponseDto ToUserResponse(User user)

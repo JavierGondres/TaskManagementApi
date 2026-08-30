@@ -20,12 +20,6 @@ public class UsersController : ControllerBase
     [HttpGet("me")]
     public async Task<ActionResult<UserResponseDto>> Me()
     {
-        var user = await _authService.GetCurrentUserAsync();
-        if (user is null)
-        {
-            return NotFound();
-        }
-
-        return Ok(user);
+        return Ok(await _authService.GetCurrentUserAsync());
     }
 }

@@ -25,7 +25,11 @@ GET {{TaskManagementApi_HostAddress}}/api/users/me
 Authorization: Bearer {{token}}
 
 ### List tasks
-GET {{TaskManagementApi_HostAddress}}/api/tasks
+GET {{TaskManagementApi_HostAddress}}/api/tasks?page=1&pageSize=10
+Authorization: Bearer {{token}}
+
+### List pending high-priority tasks
+GET {{TaskManagementApi_HostAddress}}/api/tasks?status=Pending&priority=High&page=1&pageSize=10
 Authorization: Bearer {{token}}
 
 ### Create task
