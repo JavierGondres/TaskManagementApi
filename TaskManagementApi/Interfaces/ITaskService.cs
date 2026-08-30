@@ -4,9 +4,15 @@ namespace TaskManagementApi.Interfaces;
 
 public interface ITaskService
 {
-    IEnumerable<TaskResponseDto> GetAll();
+    Task<IReadOnlyList<TaskResponseDto>> GetAllAsync();
 
-    TaskResponseDto? GetById(int id);
+    Task<TaskResponseDto?> GetByIdAsync(int id);
 
-    TaskResponseDto Create(CreateTaskDto dto);
+    Task<TaskResponseDto> CreateAsync(CreateTaskDto dto);
+
+    Task<TaskResponseDto?> UpdateAsync(int id, UpdateTaskDto dto);
+
+    Task<TaskResponseDto?> CompleteAsync(int id);
+
+    Task<bool> DeleteAsync(int id);
 }

@@ -1,5 +1,3 @@
-using TaskManagementApi.DTOs.Tasks;
-
 namespace TaskManagementApi.Models;
 
 public class TaskItem
@@ -10,11 +8,13 @@ public class TaskItem
 
     public string? Description { get; set; }
 
-    public TaskStatusEnum Status { get; set; } = TaskStatusEnum.Pending;
+    public TaskItemStatus Status { get; set; } = TaskItemStatus.Pending;
 
-    public PriorityEnum Priority { get; set; } = PriorityEnum.Medium;
+    public Priority Priority { get; set; } = Priority.Medium;
 
     public DateTime? DueDate { get; set; }
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+    public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 }

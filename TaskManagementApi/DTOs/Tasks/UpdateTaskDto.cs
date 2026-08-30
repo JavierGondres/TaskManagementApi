@@ -3,7 +3,7 @@ using TaskManagementApi.Models;
 
 namespace TaskManagementApi.DTOs.Tasks;
 
-public class CreateTaskDto
+public class UpdateTaskDto
 {
     [Required]
     [MaxLength(100)]
@@ -11,7 +11,9 @@ public class CreateTaskDto
 
     public string? Description { get; set; }
 
-    public Priority Priority { get; set; } = Priority.Medium;
+    public TaskItemStatus Status { get; set; }
+
+    public Priority Priority { get; set; }
 
     public DateTime? DueDate { get; set; }
 }

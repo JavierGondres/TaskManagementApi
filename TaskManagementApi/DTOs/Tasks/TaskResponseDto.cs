@@ -1,3 +1,5 @@
+using TaskManagementApi.Models;
+
 namespace TaskManagementApi.DTOs.Tasks;
 
 public class TaskResponseDto
@@ -8,11 +10,13 @@ public class TaskResponseDto
 
     public string? Description { get; set; }
 
-    public TaskStatusEnum Status { get; set; }
+    public TaskItemStatus Status { get; set; }
 
-    public PriorityEnum Priority { get; set; }
+    public Priority Priority { get; set; }
 
     public DateTime? DueDate { get; set; }
 
     public DateTime CreatedAt { get; set; }
+
+    public DateTime UpdatedAt { get; set; }
 }

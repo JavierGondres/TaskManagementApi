@@ -1,3 +1,5 @@
+using Microsoft.EntityFrameworkCore;
+using TaskManagementApi.Data;
 using TaskManagementApi.DTOs.Tasks;
 using TaskManagementApi.Interfaces;
 using TaskManagementApi.Models;
@@ -6,35 +8,98 @@ namespace TaskManagementApi.Services;
 
 public class TaskService : ITaskService
 {
-    private readonly List<TaskItem> _tasks = [];
-    private int _nextId = 1;
+    private readonly ApplicationDbContext _db;
 
-    public IEnumerable<TaskResponseDto> GetAll()
+    public TaskService(ApplicationDbContext db)
     {
-        return _tasks.Select(ToResponse);
+        _db = db;
     }
 
-    public TaskResponseDto? GetById(int id)
+    public async Task<IReadOnlyList<TaskResponseDto>> GetAllAsync()
     {
-        var task = _tasks.FirstOrDefault(item => item.Id == id);
+        var tasks = await _db
+            .Tasks.AsNoTracking()
+            .OrderByDescending(item => item.CreatedAt)
+            .ToListAsync();
+
+        return tasks.Select(ToResponse).ToList();
+    }
+
+    public async Task<TaskResponseDto?> GetByIdAsync(int id)
+    {
+        var task = await _db.Tasks.AsNoTracking().FirstOrDefaultAsync(item => item.Id == id);
         return task is null ? null : ToResponse(task);
     }
 
-    public TaskResponseDto Create(CreateTaskDto dto)
+    public async Task<TaskResponseDto> CreateAsync(CreateTaskDto dto)
     {
+        var now = DateTime.UtcNow;
         var task = new TaskItem
         {
-            Id = _nextId++,
             Title = dto.Title,
             Description = dto.Description,
             Priority = dto.Priority,
-            DueDate = dto.DueDate,
-            Status = TaskStatusEnum.Pending,
-            CreatedAt = DateTime.UtcNow,
+            DueDate = ToUtc(dto.DueDate),
+            Status = TaskItemStatus.Pending,
+            CreatedAt = now,
+            UpdatedAt = now,
         };
 
-        _tasks.Add(task);
+        _db.Tasks.Add(task);
+        await _db.SaveChangesAsync();
         return ToResponse(task);
+    }
+
+    public async Task<TaskResponseDto?> UpdateAsync(int id, UpdateTaskDto dto)
+    {
+        var task = await _db.Tasks.FirstOrDefaultAsync(item => item.Id == id);
+        if (task is null)
+        {
+            return null;
+        }
+
+        task.Title = dto.Title;
+        task.Description = dto.Description;
+        task.Priority = dto.Priority;
+        task.DueDate = ToUtc(dto.DueDate);
+        task.Status = dto.Status;
+        task.UpdatedAt = DateTime.UtcNow;
+
+        await _db.SaveChangesAsync();
+        return ToResponse(task);
+    }
+
+    public async Task<TaskResponseDto?> CompleteAsync(int id)
+    {
+        var task = await _db.Tasks.FirstOrDefaultAsync(item => item.Id == id);
+        if (task is null)
+        {
+            return null;
+        }
+
+        task.Status = TaskItemStatus.Completed;
+        task.UpdatedAt = DateTime.UtcNow;
+
+        await _db.SaveChangesAsync();
+        return ToResponse(task);
+    }
+
+    public async Task<bool> DeleteAsync(int id)
+    {
+        var affected = await _db.Tasks.Where(item => item.Id == id).ExecuteDeleteAsync();
+        return affected > 0;
+    }
+
+    private static DateTime? ToUtc(DateTime? value)
+    {
+        if (value is null)
+        {
+            return null;
+        }
+
+        return value.Value.Kind == DateTimeKind.Utc
+            ? value
+            : DateTime.SpecifyKind(value.Value, DateTimeKind.Utc);
     }
 
     private static TaskResponseDto ToResponse(TaskItem task)
@@ -48,6 +113,7 @@ public class TaskService : ITaskService
             Priority = task.Priority,
             DueDate = task.DueDate,
             CreatedAt = task.CreatedAt,
+            UpdatedAt = task.UpdatedAt,
         };
     }
 }

@@ -16,15 +16,15 @@ public class TasksController : ControllerBase
     }
 
     [HttpGet]
-    public ActionResult<IEnumerable<TaskResponseDto>> GetAll()
+    public async Task<ActionResult<IEnumerable<TaskResponseDto>>> GetAll()
     {
-        return Ok(_taskService.GetAll());
+        return Ok(await _taskService.GetAllAsync());
     }
 
     [HttpGet("{id:int}")]
-    public ActionResult<TaskResponseDto> GetById(int id)
+    public async Task<ActionResult<TaskResponseDto>> GetById(int id)
     {
-        var task = _taskService.GetById(id);
+        var task = await _taskService.GetByIdAsync(id);
         if (task is null)
         {
             return NotFound();
@@ -34,9 +34,45 @@ public class TasksController : ControllerBase
     }
 
     [HttpPost]
-    public ActionResult<TaskResponseDto> Create(CreateTaskDto dto)
+    public async Task<ActionResult<TaskResponseDto>> Create(CreateTaskDto dto)
     {
-        var created = _taskService.Create(dto);
+        var created = await _taskService.CreateAsync(dto);
         return CreatedAtAction(nameof(GetById), new { id = created.Id }, created);
+    }
+
+    [HttpPut("{id:int}")]
+    public async Task<ActionResult<TaskResponseDto>> Update(int id, UpdateTaskDto dto)
+    {
+        var updated = await _taskService.UpdateAsync(id, dto);
+        if (updated is null)
+        {
+            return NotFound();
+        }
+
+        return Ok(updated);
+    }
+
+    [HttpPatch("{id:int}/complete")]
+    public async Task<ActionResult<TaskResponseDto>> Complete(int id)
+    {
+        var completed = await _taskService.CompleteAsync(id);
+        if (completed is null)
+        {
+            return NotFound();
+        }
+
+        return Ok(completed);
+    }
+
+    [HttpDelete("{id:int}")]
+    public async Task<IActionResult> Delete(int id)
+    {
+        var deleted = await _taskService.DeleteAsync(id);
+        if (!deleted)
+        {
+            return NotFound();
+        }
+
+        return NoContent();
     }
 }

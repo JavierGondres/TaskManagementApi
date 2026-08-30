@@ -18,3 +18,25 @@ Content-Type: application/json
   "description": "Entender controllers, DTOs y servicios",
   "priority": "High"
 }
+
+###
+
+PUT {{TaskManagementApi_HostAddress}}/api/tasks/1
+Content-Type: application/json
+
+{
+  "title": "Aprender Entity Framework",
+  "description": "Conectar PostgreSQL y migraciones",
+  "status": "InProgress",
+  "priority": "High",
+  "dueDate": "2026-09-15T00:00:00Z"
+}
+
+###
+
+PATCH {{TaskManagementApi_HostAddress}}/api/tasks/1/complete
+Accept: application/json
+
+###
+
+DELETE {{TaskManagementApi_HostAddress}}/api/tasks/1
