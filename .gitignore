@@ -1,0 +1,38 @@
+# Build
+[Bb]in/
+[Oo]bj/
+[Oo]ut/
+artifacts/
+
+# User / IDE
+*.user
+*.suo
+*.userosscache
+.vs/
+.idea/
+*.DotSettings.user
+
+# NuGet
+*.nupkg
+*.snupkg
+project.lock.json
+
+# Publish
+publish/
+*.pubxml
+*.publishproj
+
+# Logs and local env
+*.log
+.env
+appsettings.*.local.json
+
+# Test / coverage
+[Tt]est[Rr]esult*/
+coverage*.json
+coverage*.xml
+coverage*.info
+
+# OS
+Thumbs.db
+.DS_Store
