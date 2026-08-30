@@ -9,16 +9,20 @@ namespace TaskManagementApi.Services;
 public class TaskService : ITaskService
 {
     private readonly ApplicationDbContext _db;
+    private readonly ICurrentUser _currentUser;
 
-    public TaskService(ApplicationDbContext db)
+    public TaskService(ApplicationDbContext db, ICurrentUser currentUser)
     {
         _db = db;
+        _currentUser = currentUser;
     }
 
     public async Task<IReadOnlyList<TaskResponseDto>> GetAllAsync()
     {
+        var userId = _currentUser.GetRequiredUserId();
         var tasks = await _db
             .Tasks.AsNoTracking()
+            .Where(item => item.UserId == userId)
             .OrderByDescending(item => item.CreatedAt)
             .ToListAsync();
 
@@ -27,7 +31,7 @@ public class TaskService : ITaskService
 
     public async Task<TaskResponseDto?> GetByIdAsync(int id)
     {
-        var task = await _db.Tasks.AsNoTracking().FirstOrDefaultAsync(item => item.Id == id);
+        var task = await FindOwnedTaskAsync(id, track: false);
         return task is null ? null : ToResponse(task);
     }
 
@@ -43,6 +47,7 @@ public class TaskService : ITaskService
             Status = TaskItemStatus.Pending,
             CreatedAt = now,
             UpdatedAt = now,
+            UserId = _currentUser.GetRequiredUserId(),
         };
 
         _db.Tasks.Add(task);
@@ -52,7 +57,7 @@ public class TaskService : ITaskService
 
     public async Task<TaskResponseDto?> UpdateAsync(int id, UpdateTaskDto dto)
     {
-        var task = await _db.Tasks.FirstOrDefaultAsync(item => item.Id == id);
+        var task = await FindOwnedTaskAsync(id, track: true);
         if (task is null)
         {
             return null;
@@ -71,7 +76,7 @@ public class TaskService : ITaskService
 
     public async Task<TaskResponseDto?> CompleteAsync(int id)
     {
-        var task = await _db.Tasks.FirstOrDefaultAsync(item => item.Id == id);
+        var task = await FindOwnedTaskAsync(id, track: true);
         if (task is null)
         {
             return null;
@@ -86,8 +91,18 @@ public class TaskService : ITaskService
 
     public async Task<bool> DeleteAsync(int id)
     {
-        var affected = await _db.Tasks.Where(item => item.Id == id).ExecuteDeleteAsync();
+        var userId = _currentUser.GetRequiredUserId();
+        var affected = await _db
+            .Tasks.Where(item => item.Id == id && item.UserId == userId)
+            .ExecuteDeleteAsync();
         return affected > 0;
+    }
+
+    private async Task<TaskItem?> FindOwnedTaskAsync(int id, bool track)
+    {
+        var userId = _currentUser.GetRequiredUserId();
+        var query = track ? _db.Tasks : _db.Tasks.AsNoTracking();
+        return await query.FirstOrDefaultAsync(item => item.Id == id && item.UserId == userId);
     }
 
     private static DateTime? ToUtc(DateTime? value)

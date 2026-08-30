@@ -1,42 +1,65 @@
 @TaskManagementApi_HostAddress = http://localhost:5000
+@token = 
 
-GET {{TaskManagementApi_HostAddress}}/api/tasks
-Accept: application/json
-
-###
-
-GET {{TaskManagementApi_HostAddress}}/api/tasks/1
-Accept: application/json
-
-###
-
-POST {{TaskManagementApi_HostAddress}}/api/tasks
+### Register
+POST {{TaskManagementApi_HostAddress}}/api/auth/register
 Content-Type: application/json
 
 {
-  "title": "Aprender ASP.NET Core",
-  "description": "Entender controllers, DTOs y servicios",
+  "name": "Javier",
+  "email": "javier@example.com",
+  "password": "Password1"
+}
+
+### Login
+POST {{TaskManagementApi_HostAddress}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "javier@example.com",
+  "password": "Password1"
+}
+
+### Me
+GET {{TaskManagementApi_HostAddress}}/api/users/me
+Authorization: Bearer {{token}}
+
+### List tasks
+GET {{TaskManagementApi_HostAddress}}/api/tasks
+Authorization: Bearer {{token}}
+
+### Create task
+POST {{TaskManagementApi_HostAddress}}/api/tasks
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "title": "Aprender JWT en ASP.NET",
+  "description": "Register, login y proteger endpoints",
   "priority": "High"
 }
 
-###
+### Get task
+GET {{TaskManagementApi_HostAddress}}/api/tasks/1
+Authorization: Bearer {{token}}
 
+### Update task
 PUT {{TaskManagementApi_HostAddress}}/api/tasks/1
+Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
-  "title": "Aprender Entity Framework",
-  "description": "Conectar PostgreSQL y migraciones",
+  "title": "Aprender JWT en ASP.NET",
+  "description": "Token en Swagger Authorize",
   "status": "InProgress",
   "priority": "High",
   "dueDate": "2026-09-15T00:00:00Z"
 }
 
-###
-
+### Complete task
 PATCH {{TaskManagementApi_HostAddress}}/api/tasks/1/complete
-Accept: application/json
+Authorization: Bearer {{token}}
 
-###
-
+### Delete task
 DELETE {{TaskManagementApi_HostAddress}}/api/tasks/1
+Authorization: Bearer {{token}}

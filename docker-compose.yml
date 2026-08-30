@@ -23,6 +23,10 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       ConnectionStrings__DefaultConnection: Host=postgres;Port=5432;Database=task_management;Username=postgres;Password=postgres
+      Jwt__Issuer: TaskManagementApi
+      Jwt__Audience: TaskManagementApi
+      Jwt__Key: CHANGE_ME_DEV_ONLY_use_env_in_real_deploys_32+
+      Jwt__ExpirationMinutes: "5"
     depends_on:
       postgres:
         condition: service_healthy
